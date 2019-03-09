@@ -27,7 +27,18 @@ var session = driver.session();
 
 app.get('/data', function(req, res) {
   session
-    .run('MATCH(n) RETURN n LIMIT 5')
+    .run('MATCH(n) RETURN n')
+    .then(function(result) {
+        res.json(result);
+    })
+    .catch(function(err) {
+      console.log(err)
+    })
+});
+
+app.get('/sessions', function(req, res) {
+  session
+    .run('MATCH (n:OBJECT) RETURN n.session, count(n.session)')
     .then(function(result) {
         res.json(result);
     })

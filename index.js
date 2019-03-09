@@ -26,14 +26,14 @@ function groupBySession(response) {
         if (!checkSessionIsPresent(sessionValue)) {
             recordsBySession.push({
                 session: sessionValue,
-                actions: [{type: record._fields[0].properties.action, path: record._fields[0].properties.value}]
+                actions: [{type: record._fields[0].properties.action, path: record._fields[0].properties.path}]
             });
         }
         else {
             let sameSessionRecord = recordsBySession.filter(record => {
                 return record.session === sessionValue
             });
-            sameSessionRecord[0].actions.push({type: record._fields[0].properties.action, path: record._fields[0].properties.value})
+            sameSessionRecord[0].actions.push({type: record._fields[0].properties.action, path: record._fields[0].properties.path})
         }
     });
     console.log("recordsBySession: ", recordsBySession);
@@ -48,10 +48,16 @@ function checkSessionIsPresent(session) {
     });
     return present;
 }
-function getPatterns(){
-    //console.log( _.isEqual(remoteJSON, localJSON) );
 
+function getPatterns(){
+    recordsBySession.forEach((recordBySession) => {
+        let sameSessionRecord = recordsBySession.filter(record => {
+            return record.actions === recordsBySession.actions
+        });
+        console.log("sameSessionRecord: ", sameSessionRecord);
+    });
 }
+
 function getPatterns_deprecate() {
     const data = [{action: 'click', path: '#test'}, {action: 'click', path: '#test'}, {
         action: 'click',
@@ -114,7 +120,6 @@ function getTests() {
                testCommand += `.click(); \n`;
 
            }
-           console.log(testCommand);
            testDoc += testCommand;
        });
     });

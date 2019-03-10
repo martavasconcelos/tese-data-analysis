@@ -13,115 +13,128 @@ function getData() {
     xhr.send('');
 }
 
+function getSession(type){
 
-function callbackFromDatabase(response) {
-    let reponseJson = JSON.parse(response);
-    console.log("response: ", reponseJson);
-    groupBySession(reponseJson);
-}
+    const xhr = new XMLHttpRequest();
 
-function groupBySession(response) {
-    response.records.forEach((record) => {
-        const sessionValue = record._fields[0].properties.session;
-        if (!checkSessionIsPresent(sessionValue)) {
-            recordsBySession.push({
-                session: sessionValue,
-                actions: [{type: record._fields[0].properties.action, path: record._fields[0].properties.path}]
-            });
+    xhr.open('GET', 'http://localhost:3000/session', true);
+    xhr.onload = function () {
+        if (type === 1){
+            callbackFromGetSessionToJaccard(xhr.response, type);
         }
-        else {
-            let sameSessionRecord = recordsBySession.filter(record => {
-                return record.session === sessionValue
-            });
-            sameSessionRecord[0].actions.push({type: record._fields[0].properties.action, path: record._fields[0].properties.path})
+        if (type === 2){
+            callbackFromGetSessionToActionTypes(xhr.response, type);
         }
-    });
-    console.log("recordsBySession: ", recordsBySession);
+    };
+    xhr.send('');
 }
 
-function checkSessionIsPresent(session) {
-    let present = false;
-    recordsBySession.forEach((recordBySession) => {
-        if (session === recordBySession.session) {
-            present = true;
-        }
-    });
-    return present;
-}
+function callbackFromGetSessionToJaccard(response) {
+    let responseJson = JSON.parse(response);
+    console.log("sessions: ", responseJson.records);
 
-function getPatterns(){
-    recordsBySession.forEach((recordBySession) => {
-        let sameSessionRecord = recordsBySession.filter(record => {
-            return record.actions === recordsBySession.actions
-        });
-        console.log("sameSessionRecord: ", sameSessionRecord);
-    });
-}
 
-function getPatterns_deprecate() {
-    const data = [{action: 'click', path: '#test'}, {action: 'click', path: '#test'}, {
-        action: 'click',
-        path: '#button'
-    },];
-    console.log("data: ", data);
-    data.forEach((currentPath) => {
-        let counter = 0;
-        let add = true;
-        data.forEach((path) => {
-            if (currentPath.action === path.action && currentPath.path === path.path) {
-                counter++;
+    for (let i = 0; i < responseJson.records.length - 1; i++) {
+        console.log(responseJson.records[i]._fields[0]);
+        for (var j = i + 1; j < responseJson.records.length; j++) {
+            if(responseJson.records[i]._fields[0] !== responseJson.records[j]._fields[0]){
+                getJaccard(responseJson.records[i]._fields[0], responseJson.records[j]._fields[0]);
             }
-        });
-
-        finalData.forEach((path) => {
-            if (currentPath.action === path.flow.action && currentPath.path === path.flow.path) {
-                add = false;
-            }
-        });
-        if (add) {
-            finalData.push({flow: {action: currentPath.action, path: currentPath.path}, count: counter})
         }
-
-    });
-    console.log("finalData: ", finalData);
-    print(finalData);
+    }
 }
 
+function callbackFromGetSessionToActionTypes(response) {
+    let responseJson = JSON.parse(response);
+    console.log("sessions: ", responseJson.records);
 
-function print(data) {
+
+    for (let i = 0; i < responseJson.records.length - 1; i++) {
+        getActionTypes(responseJson.records[i]._fields[0], responseJson.records[i]._fields[0]);
+    }
+}
+
+function getJaccard(entry, session){
     let ul = document.getElementById("list");
     ul.innerHTML = "";
+    console.log("getJaccard: ", entry, "with ", session);
+    const xhr = new XMLHttpRequest();
 
-    data.forEach((path) => {
-        let li = document.createElement("li");
-        li.appendChild(document.createTextNode(path.flow.action + " " + path.flow.path + " -> " + path.count + " time(s)"));
-        li.setAttribute("class", "element"); // added line
-        ul.appendChild(li);
-    });
+    xhr.open('POST', 'http://localhost:3000/jaccard', true);
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+    xhr.send(JSON.stringify({
+        session1: entry,
+        session2: session,
+    }));
+    xhr.onload = function () {
+        callbackFromJaccard(xhr.response);
+    };
+}
+
+function callbackFromJaccard(response) {
+    let responseJson = JSON.parse(response);
+    let similarity = responseJson.records[0]._fields[4];
+    console.log("Similar: ", similarity);
+    if(similarity > document.getElementById("threshold").value){
+        printSimilarity(responseJson.records[0]._fields[0],responseJson.records[0]._fields[2],similarity);
+    }
+}
+function getActionTypes(entry, session){
+    let ul = document.getElementById("list");
+    ul.innerHTML = "";
+    const xhr = new XMLHttpRequest();
+
+    xhr.open('POST', 'http://localhost:3000/actiontype', true);
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+    xhr.send(JSON.stringify({
+        session1: entry,
+        session2: session,
+    }));
+    xhr.onload = function () {
+        callbackFromActionTypes(xhr.response);
+    };
+}
+
+function callbackFromActionTypes(response) {
+    let responseJson = JSON.parse(response);
+    let numberOfActions = responseJson.records[0]._fields[1].low;
+    console.log("response: ", numberOfActions);
+    if(numberOfActions > document.getElementById("actionTypes").value){
+        printActionTypes(responseJson.records[0]._fields[0],numberOfActions);
+    }
 }
 
 
-function getTests_deprecate() {
-    finalData.forEach((path) => {
-        finalTestData.push({command: "driver.findElement(By.xpath(" + path.flow.path + ").click()" + "\n"});
-    });
-    printTest(finalTestData);
+function printSimilarity(session1, session2, similarity) {
+    let ul = document.getElementById("list");
+    let li = document.createElement("li");
+    li.appendChild(document.createTextNode(session1 + " and " + session2 + " -> " + similarity));
+    li.setAttribute("class", "element"); // added line
+    ul.appendChild(li);
+}
+
+function printActionTypes(session, numberOfTypes) {
+    let ul = document.getElementById("list");
+    let li = document.createElement("li");
+    li.appendChild(document.createTextNode(session + " -> " + numberOfTypes));
+    li.setAttribute("class", "element"); // added line
+    ul.appendChild(li);
 }
 
 
 function getTests() {
     recordsBySession.forEach((recordBySession) => {
-       recordBySession.actions.forEach((action) =>{
-           let testCommand = `driver.findElement(By.xpath(${action.path})`;
-           if (action.type === "click"){
-               testCommand += `.click(); \n`;
+        recordBySession.actions.forEach((action) =>{
+            let testCommand = `driver.findElement(By.xpath(${action.path})`;
+            if (action.type === "click"){
+                testCommand += `.click(); \n`;
             }
             else if (action.type === "input"){
-               testCommand += `.click(); \n`;
+                testCommand += `.click(); \n`;
 
-           }
-           testDoc += testCommand;
-       });
+            }
+            testDoc += testCommand;
+        });
     });
     console.log("tests: ", testDoc);
 }

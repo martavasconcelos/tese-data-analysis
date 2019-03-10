@@ -36,9 +36,47 @@ app.get('/data', function(req, res) {
     })
 });
 
-app.get('/sessions', function(req, res) {
+app.get('/session', function(req, res) {
   session
     .run('MATCH (n:OBJECT) RETURN n.session, count(n.session)')
+    .then(function(result) {
+        res.json(result);
+    })
+    .catch(function(err) {
+      console.log(err)
+    })
+});
+
+app.post('/jaccard', function(req, res) {
+    console.log("...........", req.body.session1);
+    console.log("...........", req.body.session2);
+  session
+    .run('Match (n:OBJECT {session: {session1Param}}) ' +
+        'WITH n.session as nSession, collect(n.pathId) AS n1Vector ' +
+        'Match (p:OBJECT {session: {session2Param}}) ' +
+        'WITH p.session as pSession, nSession, n1Vector, collect(p.pathId) AS n2Vector ' +
+        'RETURN nSession as nSession, n1Vector as n1, pSession as pSession, n2Vector as n2, algo.similarity.jaccard(n1Vector, n2Vector) AS similarity', {
+        session1Param: req.body.session1,
+        session2Param: req.body.session2,
+    })
+    .then(function(result) {
+        res.json(result);
+    })
+    .catch(function(err) {
+      console.log(err)
+    })
+});
+
+app.post('/actiontype', function(req, res) {
+    console.log("...........", req.body.session1);
+    console.log("...........", req.body.session2);
+  session
+    .run('Match (n:OBJECT {session: {session1Param}}) ' +
+        'WITH n.session as session, collect(DISTINCT n.action) AS n1Vector ' +
+        'RETURN session, size(n1Vector)', {
+        session1Param: req.body.session1,
+        session2Param: req.body.session2,
+    })
     .then(function(result) {
         res.json(result);
     })

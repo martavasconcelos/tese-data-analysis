@@ -38,7 +38,19 @@ app.get('/data', function(req, res) {
 
 app.get('/session', function(req, res) {
   session
-    .run('MATCH (n:OBJECT) RETURN n.session, count(n.session)')
+    .run('MATCH (n:OBJECT) RETURN n.session, count(n.session) AS count ORDER BY count desc')
+    .then(function(result) {
+        res.json(result);
+    })
+    .catch(function(err) {
+      console.log(err)
+    })
+});
+
+app.get('/pathid', function(req, res) {
+  session
+    .run('MATCH (n:OBJECT) n.session as session, collect(n.pathId) AS n1Vector ' +
+        'return session, n1Vector')
     .then(function(result) {
         res.json(result);
     })
@@ -69,13 +81,29 @@ app.post('/jaccard', function(req, res) {
 
 app.post('/actiontype', function(req, res) {
     console.log("...........", req.body.session1);
-    console.log("...........", req.body.session2);
   session
     .run('Match (n:OBJECT {session: {session1Param}}) ' +
         'WITH n.session as session, collect(DISTINCT n.action) AS n1Vector ' +
         'RETURN session, size(n1Vector)', {
         session1Param: req.body.session1,
-        session2Param: req.body.session2,
+    })
+    .then(function(result) {
+        res.json(result);
+    })
+    .catch(function(err) {
+      console.log(err)
+    })
+});
+
+// todo test
+app.post('/goal', function(req, res) {
+  session
+    .run('Match (n:OBJECT {path: {pathParam}}) ' +
+        'WITH n as originalNode, n.session as sessionId ' +
+        'Match (x:OBJECT {session: sessionId}) ' +
+        'WITH x.session as session, count(x.session) AS count, originalNode ' +
+        'RETURN session, count, originalNode.elementPos as nodePosition, count = originalNode.elementPos as lastNode', {
+        pathParam: req.body.path,
     })
     .then(function(result) {
         res.json(result);

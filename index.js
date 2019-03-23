@@ -3,6 +3,7 @@ let finalTestData = [];
 let recordsBySession = [];
 let testDoc = "";
 
+/* Database Requests */
 function getData() {
     const xhr = new XMLHttpRequest();
 
@@ -19,9 +20,6 @@ function getSession(type) {
 
     xhr.open('GET', 'http://localhost:3000/session', true);
     xhr.onload = function () {
-        if (type === 1) {
-            callbackFromGetSessionToJaccard(xhr.response);
-        }
         if (type === 2) {
             callbackFromGetSessionToActionTypes(xhr.response);
         }
@@ -29,10 +27,9 @@ function getSession(type) {
     xhr.send('');
 }
 
-
 function getGoal() {
     let path = document.getElementById("goal").value;
-        let ul = document.getElementById("list");
+    let ul = document.getElementById("list");
     ul.innerHTML = "";
     const xhr = new XMLHttpRequest();
 
@@ -45,68 +42,6 @@ function getGoal() {
         callbackFromGoal(xhr.response);
     };
 }
-
-function callbackFromGoal(response) {
-    let responseJson = JSON.parse(response);
-    console.log("goal: ", responseJson);
-
-    for (let i = 0; i < responseJson.records.length - 1; i++) {
-        if (responseJson.records[i]._fields[3]) {
-            printGoal(responseJson.records[i]._fields[0]);
-        }
-    }
-}
-
-function callbackFromGetSessionToJaccard(response) {
-    let responseJson = JSON.parse(response);
-    console.log("sessions: ", responseJson.records);
-
-
-    for (let i = 0; i < responseJson.records.length - 1; i++) {
-        console.log(responseJson.records[i]._fields[0]);
-        for (var j = i + 1; j < responseJson.records.length; j++) {
-            if (responseJson.records[i]._fields[0] !== responseJson.records[j]._fields[0]) {
-                getJaccard(responseJson.records[i]._fields[0], responseJson.records[j]._fields[0]);
-            }
-        }
-    }
-}
-
-function callbackFromGetSessionToActionTypes(response) {
-    let responseJson = JSON.parse(response);
-    console.log("sessions: ", responseJson.records);
-
-    for (let i = 0; i < responseJson.records.length - 1; i++) {
-        getActionTypes(responseJson.records[i]._fields[0]);
-    }
-}
-
-function getJaccard(entry, session) {
-    let ul = document.getElementById("list");
-    ul.innerHTML = "";
-    console.log("getJaccard: ", entry, "with ", session);
-    const xhr = new XMLHttpRequest();
-
-    xhr.open('POST', 'http://localhost:3000/jaccard', true);
-    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-    xhr.send(JSON.stringify({
-        session1: entry,
-        session2: session,
-    }));
-    xhr.onload = function () {
-        callbackFromJaccard(xhr.response);
-    };
-}
-
-function callbackFromJaccard(response) {
-    let responseJson = JSON.parse(response);
-    let similarity = responseJson.records[0]._fields[4];
-    console.log("Similar: ", similarity);
-    if (similarity > document.getElementById("threshold").value) {
-        printSimilarity(responseJson.records[0]._fields[0], responseJson.records[0]._fields[2], similarity);
-    }
-}
-
 function getActionTypes(session) {
     let ul = document.getElementById("list");
     ul.innerHTML = "";
@@ -122,6 +57,114 @@ function getActionTypes(session) {
     };
 }
 
+
+function getPathIdBySession() {
+    let path = document.getElementById("goal").value;
+    let ul = document.getElementById("list");
+    ul.innerHTML = "";
+    const xhr = new XMLHttpRequest();
+
+    xhr.open('GET', 'http://localhost:3000/pathid', true);
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+    xhr.send(JSON.stringify(''));
+    xhr.onload = function () {
+        getMostCommon(xhr.response);
+    };
+}
+
+/* Data treatment */
+
+function getMostCommon(response) {
+    let responseJson = JSON.parse(response);
+    console.log("path id by session: ", responseJson.records);
+
+    for (let i = 0; i < responseJson.records.length - 1; i++) {
+        for (var j = i + 1; j < responseJson.records.length; j++) {
+            if (responseJson.records[i]._fields[0] !== responseJson.records[j]._fields[0]) {
+                console.log(responseJson.records[i]._fields[0]);
+                console.log(responseJson.records[j]._fields[0]);
+                checkLength(responseJson.records[i]._fields[1], responseJson.records[j]._fields[1]);
+            }
+        }
+    }
+}
+/*
+function getSimilarity() {
+
+    const xhr = new XMLHttpRequest();
+
+    xhr.open('POST', 'http://localhost:3000/actiontype', true);
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+    xhr.send(JSON.stringify({
+        session1: session,
+    }));
+    xhr.onload = function () {
+        callbackFromActionTypes(xhr.response);
+    };
+}*/
+
+function checkLength(seq1, seq2) {
+    if(seq1.length === seq2.length){
+        console.log("same length seq1: ", seq1);
+        console.log("same length seq2: ", seq2);
+        getSimilarity(seq1, seq2);
+    }
+    else{
+        let seq1Copy = [...seq1];
+        let seq2Copy = [...seq2];
+        let shortest = getShortest(seq1Copy, seq2Copy);
+        let longest = (shortest === seq1Copy ? seq2Copy : seq1Copy);
+
+        while (shortest.length !== longest.length){
+            shortest.push(0);
+        }
+
+        console.log("shortest: ", shortest);
+        console.log("longest: ", longest);
+    }
+
+}
+
+function getSimilarity(seq1, seq2){
+    return 1;
+}
+
+function getShortest(seq1, seq2){
+    return seq1.length > seq2.length ? seq2 : seq1;
+}
+
+function callbackFromGoal(response) {
+    let responseJson = JSON.parse(response);
+    console.log("goal: ", responseJson);
+
+    for (let i = 0; i < responseJson.records.length - 1; i++) {
+        if (responseJson.records[i]._fields[3]) {
+            printGoal(responseJson.records[i]._fields[0]);
+        }
+    }
+}
+
+
+function callbackFromGetSessionToActionTypes(response) {
+    let responseJson = JSON.parse(response);
+    console.log("sessions: ", responseJson.records);
+
+    for (let i = 0; i < responseJson.records.length - 1; i++) {
+        getActionTypes(responseJson.records[i]._fields[0]);
+    }
+}
+
+function callbackFromMostCommon(response) {
+    let responseJson = JSON.parse(response);
+    let similarity = responseJson.records[0]._fields[4];
+    console.log("Similar: ", similarity);
+    if (similarity > document.getElementById("threshold").value) {
+        printSimilarity(responseJson.records[0]._fields[0], responseJson.records[0]._fields[2], similarity);
+    }
+}
+
+
+
 function callbackFromActionTypes(response) {
     let responseJson = JSON.parse(response);
     let numberOfActions = responseJson.records[0]._fields[1].low;
@@ -130,6 +173,8 @@ function callbackFromActionTypes(response) {
         printActionTypes(responseJson.records[0]._fields[0], numberOfActions);
     }
 }
+
+/* Print functions */
 
 // todo: generalizar um funçao de print
 function printSimilarity(session1, session2, similarity) {

@@ -47,10 +47,10 @@ app.get('/session', function(req, res) {
     })
 });
 
-app.get('/pathid', function(req, res) {
+app.get('/pathId', function(req, res) {
   session
-    .run('MATCH (n:OBJECT) n.session as session, collect(n.pathId) AS n1Vector ' +
-        'return session, n1Vector')
+    .run('MATCH (n:OBJECT) WITH n.session as session, collect(n.pathId) AS n1Vector ' +
+        'RETURN session, n1Vector')
     .then(function(result) {
         res.json(result);
     })

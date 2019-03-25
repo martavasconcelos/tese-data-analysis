@@ -10,8 +10,10 @@
   "license": "ISC",
   "dependencies": {
     "body-parser": "*",
+    "compute-hamming": "^1.1.0",
     "ejs": "*",
     "express": "*",
+    "jquery": "^3.3.1",
     "morgan": "*",
     "neo4j-driver": "*",
     "path": "^0.12.7",

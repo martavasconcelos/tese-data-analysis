@@ -79,7 +79,14 @@ function getMostCommon(response) {
     let responseJson = JSON.parse(response);
     console.log("path id by session: ", responseJson.records);
     createTable(responseJson);
-    for (let i = 0; i < responseJson.records.length - 1; i++) {
+    for (let i = 0; i < responseJson.records.length; i++) {
+
+        let trSession1 = document.getElementById(responseJson.records[i]._fields[0]);
+
+        let thSimilaritySession1 = document.createElement("th");
+        thSimilaritySession1.appendChild(document.createTextNode("----"));
+        trSession1.appendChild(thSimilaritySession1);
+
         for (var j = i + 1; j < responseJson.records.length; j++) {
 
             let session1 = responseJson.records[i]._fields[0];
@@ -87,26 +94,29 @@ function getMostCommon(response) {
             let session2 = responseJson.records[j]._fields[0];
             let seq2 = responseJson.records[j]._fields[1];
 
+            let similarity;
             if (session1 !== session2) {
 
-                /* processing(responseJson.records[i]._fields[0],
-                     responseJson.records[i]._fields[1],
-                     responseJson.records[j]._fields[0],
-                     responseJson.records[j]._fields[1]); */
-
-                let similarity = getSimilarity(seq1, seq2)
-                let tr = document.getElementById(session2);
-
-                let thSimilarity = document.createElement("th");
-                thSimilarity.appendChild(document.createTextNode(similarity));
-                tr.appendChild(thSimilarity);
+                similarity = getSimilarity(seq1, seq2)
+            }
+            else {
+                similarity = null;
 
             }
+            let trSession2 = document.getElementById(session2);
+
+            let thSimilaritySession2 = document.createElement("th");
+            thSimilaritySession2.appendChild(document.createTextNode(similarity));
+            trSession2.appendChild(thSimilaritySession2);
+
+            let trSession1 = document.getElementById(session1);
+
+            let thSimilaritySession1 = document.createElement("th");
+            thSimilaritySession1.appendChild(document.createTextNode(similarity));
+            trSession1.appendChild(thSimilaritySession1);
+
         }
     }
-    let table = document.getElementById("table");
-
-    //exportTableToCSV(table,"similarity");
 }
 
 function createTable(responseJson) {
@@ -161,24 +171,23 @@ function getSimilarity() {
     };
 }*/
 
-function sameLength( seq1, seq2) {
+function sameLength(seq1, seq2) {
 
-      if(seq1.length === seq2.length){
-          return {seq1: seq1, seq2: seq2};
-      }
-      else{
-          let seq1Copy = [...seq1];
-          let seq2Copy = [...seq2];
-          let shortest = getShortest(seq1Copy, seq2Copy);
-          let longest = (shortest === seq1Copy ? seq2Copy : seq1Copy);
+    if (seq1.length === seq2.length) {
+        return {seq1: seq1, seq2: seq2};
+    }
+    else {
+        let seq1Copy = [...seq1];
+        let seq2Copy = [...seq2];
+        let shortest = getShortest(seq1Copy, seq2Copy);
+        let longest = (shortest === seq1Copy ? seq2Copy : seq1Copy);
 
-          while (shortest.length !== longest.length){
-              shortest.push(0);
-          }
-          return {seq1: shortest, seq2: longest};
-      }
+        while (shortest.length !== longest.length) {
+            shortest.push(0);
+        }
+        return {seq1: shortest, seq2: longest};
+    }
 }
-
 
 
 function getShortest(seq1, seq2) {
@@ -280,4 +289,37 @@ function printTest(data) {
         li.setAttribute("class", "element"); // added line
         ul.appendChild(li);
     });
+}
+
+function fnExcelReport() {
+    console.log("excel");
+    var tab_text = '<html xmlns:x="urn:schemas-microsoft-com:office:excel">';
+    tab_text = tab_text + '<head><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>';
+
+    tab_text = tab_text + '<x:Name>Test Sheet</x:Name>';
+
+    tab_text = tab_text + '<x:WorksheetOptions><x:Panes></x:Panes></x:WorksheetOptions></x:ExcelWorksheet>';
+    tab_text = tab_text + '</x:ExcelWorksheets></x:ExcelWorkbook></xml></head><body>';
+
+    tab_text = tab_text + "<table border='1px'>";
+    tab_text = tab_text + $('#table').html();
+    tab_text = tab_text + '</table></body></html>';
+
+    var data_type = 'data:application/vnd.ms-excel';
+
+    var ua = window.navigator.userAgent;
+    var msie = ua.indexOf("MSIE ");
+
+    if (msie > 0 || !!navigator.userAgent.match(/Trident.*rv\:11\./)) {
+        if (window.navigator.msSaveBlob) {
+            var blob = new Blob([tab_text], {
+                type: "application/csv;charset=utf-8;"
+            });
+            navigator.msSaveBlob(blob, 'Test file.xls');
+        }
+    } else {
+        $('#test').attr('href', data_type + ', ' + encodeURIComponent(tab_text));
+        $('#test').attr('download', 'Test file.xls');
+    }
+
 }

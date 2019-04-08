@@ -47,29 +47,22 @@ app.get('/session', function(req, res) {
     })
 });
 
-app.post('/actiontype', function(req, res) {
-    console.log("...........", req.body.sessions);
-    let response =[];
-    let counter =0;
-    req.body.sessions.forEach(function(element) {
-        console.log(element);
-        session
-            .run('Match (n:OBJECT {session: {sessionParam}}) ' +
-                'WITH n.session as session, collect(DISTINCT n.action) AS n1Vector ' +
-                'RETURN session, size(n1Vector)', {
-                sessionParam: element,
-            })
-            .then(function(result) {
-                counter++;
-                response.push({session: result.records[0]._fields[0], actionTypes: result.records[0]._fields[1].low});
-                if(req.body.sessions.length === counter){
-                    return res.status(200).json({"sessions": response});
-                }
-            })
-    });
+app.get('/actiontype', function(req, res) {
+  session
+    .run('Match (n:OBJECT) ' +
+        'WITH n as originalNode, n.session as sessionId ' +
+        'Match (n:OBJECT {session: sessionId}) ' +
+        'WITH n.session as session, collect(DISTINCT n.action) AS n1Vector ' +
+        'RETURN session, size(n1Vector)')
+    .then(function(result) {
+        res.json(result);
+    })
+    .catch(function(err) {
+      console.log(err)
+    })
 });
 
-app.get('/pathid', function(req, res) {
+app.get('/path', function(req, res) {
   session
     .run('MATCH (n:OBJECT) WITH n.session as session, collect(n.pathId) AS n1Vector ' +
         'RETURN session, n1Vector')
@@ -98,50 +91,7 @@ app.post('/element', function(req, res) {
         })
 });
 
-/* --------------- unused ---------------- */
-
-app.post('/jaccard', function(req, res) {
-    console.log("...........", req.body.session1);
-    console.log("...........", req.body.session2);
-  session
-    .run('Match (n:OBJECT {session: {session1Param}}) ' +
-        'WITH n.session as nSession, collect(n.pathId) AS n1Vector ' +
-        'Match (p:OBJECT {session: {session2Param}}) ' +
-        'WITH p.session as pSession, nSession, n1Vector, collect(p.pathId) AS n2Vector ' +
-        'RETURN nSession as nSession, n1Vector as n1, pSession as pSession, n2Vector as n2, algo.similarity.jaccard(n1Vector, n2Vector) AS similarity', {
-        session1Param: req.body.session1,
-        session2Param: req.body.session2,
-    })
-    .then(function(result) {
-        res.json(result);
-    })
-    .catch(function(err) {
-      console.log(err)
-    })
-});
-
-/*
-app.post('/actiontype', function(req, res) {
-    console.log("...........", req.body.session);
-  session
-    .run('Match (n:OBJECT {session: {sessionParam}}) ' +
-        'WITH n.session as session, collect(DISTINCT n.action) AS n1Vector ' +
-        'RETURN session, size(n1Vector)', {
-        sessionParam: req.body.session,
-    })
-    .then(function(result) {
-        res.json(result);
-    })
-    .catch(function(err) {
-      console.log(err)
-    })
-});*/
-
-
-
-
-
-app.listen(3000);
+app.listen(3000, '10.227.107.156');
 console.log('Server Started on Port 3000');
 
 module.exports = app;

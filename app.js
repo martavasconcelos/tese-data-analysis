@@ -22,12 +22,7 @@ app.use(function (req, res, next) {
     next();
 });
 
-var driver = neo4j.driver('bolt://10.227.107.156', neo4j.auth.basic('neo4j', 'tese2018'),
-    {
-        maxConnectionLifetime: 3 * 60 * 60 * 1000, // 3 hours
-        maxConnectionPoolSize: 50,
-        connectionAcquisitionTimeout: 2471310 // 120 seconds
-    });
+var driver = neo4j.driver('bolt://10.227.107.156', neo4j.auth.basic('neo4j', 'tese2018'));
 
 var session = driver.session();
 
@@ -64,12 +59,10 @@ app.post('/session', function (req, res) {
         .catch(function (err) {
             console.log(err)
         })
-})
-;
+});
 
 
 app.get('/actiontype', function (req, res) {
-    console.log("-----");
     session
         .run('MATCH (n:OBJECT) RETURN n.session, size(collect(DISTINCT n.action)), collect(DISTINCT n.action)', {
         })
@@ -85,6 +78,30 @@ app.get('/path', function (req, res) {
     session
         .run('MATCH (n:OBJECT) WITH n.session as session, collect(n.pathId) AS n1Vector ' +
             'RETURN session, n1Vector')
+        .then(function (result) {
+            res.json(result);
+        })
+        .catch(function (err) {
+            console.log(err)
+        })
+});
+
+app.get('/url', function (req, res) {
+    session
+        .run('MATCH (n) WITH DISTINCT n.url as url, count(n.url) AS count RETURN url, count ORDER BY count desc')
+        .then(function (result) {
+            res.json(result);
+        })
+        .catch(function (err) {
+            console.log(err)
+        })
+});
+
+app.post('/url', function (req, res) {
+    session
+        .run('MATCH (n) where n.url={urlParam} WITH DISTINCT n.session as session RETURN session', {
+            urlParam: req.body.url
+        })
         .then(function (result) {
             res.json(result);
         })

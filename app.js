@@ -76,8 +76,8 @@ app.get('/actiontype', function (req, res) {
 
 app.get('/path', function (req, res) {
     session
-        .run('MATCH (n:OBJECT) WITH n.session as session, collect(n.pathId) AS n1Vector ' +
-            'RETURN session, n1Vector')
+        .run('MATCH (n:OBJECT) WITH n.session as sessionId, collect(n.pathId) AS pathArray ' +
+            'RETURN sessionId, pathArray')
         .then(function (result) {
             res.json(result);
         })
@@ -99,9 +99,33 @@ app.get('/url', function (req, res) {
 
 app.post('/url', function (req, res) {
     session
-        .run('MATCH (n) where n.url={urlParam} WITH DISTINCT n.session as session RETURN session', {
+        .run('MATCH (n) where n.url={urlParam} WITH DISTINCT n.session as sessionId RETURN sessionId', {
             urlParam: req.body.url
         })
+        .then(function (result) {
+            res.json(result);
+        })
+        .catch(function (err) {
+            console.log(err)
+        })
+});
+
+app.get('/urlsession', function (req, res) {
+    session
+        .run('MATCH (n:OBJECT) WITH n.session as sessionId, collect( DISTINCT n.url) AS urlArray, count( DISTINCT n) AS count ' +
+            'RETURN sessionId, urlArray, count ORDER BY count DESC')
+        .then(function (result) {
+            res.json(result);
+        })
+        .catch(function (err) {
+            console.log(err)
+        })
+});
+
+app.get('/pathsession', function (req, res) {
+    session
+        .run('MATCH (n:OBJECT) WITH n.session as sessionId, collect( DISTINCT n.pathId) AS pathIdArray, count( DISTINCT n) AS count ' +
+            'RETURN sessionId, pathIdArray, count ORDER BY count DESC')
         .then(function (result) {
             res.json(result);
         })
@@ -115,8 +139,8 @@ app.post('/element', function (req, res) {
         .run('Match (n:OBJECT {path: {pathParam}}) ' +
             'WITH n as originalNode, n.session as sessionId ' +
             'Match (x:OBJECT {session: sessionId}) ' +
-            'WITH x.session as session, count(x.session) AS count, originalNode ' +
-            'RETURN session, count, originalNode.elementPos as nodePosition, count = originalNode.elementPos as lastNode', {
+            'WITH x.session as sessionId, count(x.sessionId) AS count, originalNode ' +
+            'RETURN sessionId, count, originalNode.elementPos as nodePosition, count = originalNode.elementPos as lastNode', {
             pathParam: req.body.path,
         })
         .then(function (result) {
